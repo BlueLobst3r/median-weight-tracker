@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>MedianScale — Weekly Weight Tracker</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            surface: {
+              900: '#0b1120',
+              800: '#131c31',
+              700: '#1c2842',
+              600: '#273657',
+            },
+            accent: {
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Dynamic Manifest Injection for Android PWA Installability -->
+  <script>
+    (function setupManifest() {
+      const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#10b981"/><path d="M128 336l80-96 72 64 104-128" fill="none" stroke="#0b1120" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/><circle cx="128" cy="336" r="24" fill="#0b1120"/><circle cx="208" cy="240" r="24" fill="#0b1120"/><circle cx="280" cy="304" r="24" fill="#0b1120"/><circle cx="384" cy="176" r="24" fill="#0b1120"/></svg>`;
+      const iconUrl = 'data:image/svg+xml;base64,' + btoa(iconSvg);
+      const manifest = {
+        name: 'MedianScale Weight Tracker',
+        short_name: 'MedianScale',
+        description: 'Daily weight logger with Monday-Sunday weekly median analytics.',
+        start_url: '.',
+        display: 'standalone',
+        background_color: '#0b1120',
+        theme_color: '#0b1120',
+        icons: [
+          { src: iconUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = URL.createObjectURL(blob);
+      document.head.appendChild(manifestLink);
+    })();
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-surface-900 dark:text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white pb-24">
+
+  <!-- Top App Bar -->
+  <header class="sticky top-0 z-30 bg-white/85 dark:bg-surface-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80">
+    <div class="max-w-lg mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <svg class="w-5 h-5 text-surface-900" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M17 7h4v4" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-bold text-base tracking-tight leading-tight">MedianScale</h1>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Mon–Sun Weekly Median</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <!-- Install App Button -->
+        <button id="installBtn" onclick="openInstallModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+          </svg>
+          <span>Install</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" aria-label="Toggle theme" class="p-2.5 rounded-xl bg-slate-100 dark:bg-surface-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-surface-700 active:scale-95 transition">
+          <svg id="sunIcon" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+          </svg>
+          <svg id="moonIcon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-lg mx-auto px-4 pt-4 space-y-5">
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 translate-y-3">
+      <div id="toastInner" class="px-4 py-2.5 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold shadow-xl flex items-center gap-2">
+        <span id="toastIcon">✓</span>
+        <span id="toastMsg">Saved</span>
+      </div>
+    </div>
+
+    <!-- 1. Current Week Median Highlight Card -->
+    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-surface-800 via-surface-800 to-surface-700 text-white p-5 shadow-xl border border-slate-700/60">
+      <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"></div>
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Current Week (Mon–Sun)
+          </span>
+          <p id="currentWeekRange" class="text-xs text-slate-400 mt-2 font-medium">--</p>
+        </div>
+        <div class="text-right">
+          <span id="currentWeekDaysBadge" class="inline-block px-2.5 py-1 rounded-xl bg-white/10 text-xs font-semibold text-slate-200">
+            0/7 days
+          </span>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-baseline justify-between gap-3">
+        <div class="flex items-baseline gap-1.5">
+          <span id="currentMedianValue" class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white">--.-</span>
+          <span class="text-lg font-semibold text-slate-400">kg</span>
+        </div>
+        <div id="currentDeltaContainer" class="text-right">
+          <span id="currentDeltaBadge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-700/80 text-slate-300">
+            No prior week
+          </span>
+          <p class="text-[11px] text-slate-400 mt-1">vs. previous week</p>
+        </div>
+      </div>
+
+      <!-- Mini 7-Day Mon-Sun Pill Strip -->
+      <div class="mt-5 pt-4 border-t border-white/10">
+        <div class="grid grid-cols-7 gap-1.5 text-center" id="weekDayStrip">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Quick Weight Entry Card -->
+    <section class="rounded-3xl bg-white dark:bg-surface-800 p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold tracking-tight flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          Log Daily Weight
+        </h2>
+        <span id="editingIndicator" class="hidden text-[11px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg">
+          Updating existing date
+        </span>
+      </div>
+
+      <form id="weightForm" onsubmit="handleSaveEntry(event)" class="space-y-3">
+        <div class="grid grid-cols-12 gap-2.5">
+          <!-- Weight Input -->
+          <div class="col-span-6 relative">
+            <label for="weightInput" class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1 ml-1">Weight (kg)</label>
+            <div class="relative">
+              <input
+                type="number"
+                id="weightInput"
+                step="0.1"
+                min="20"
+                max="400"
+                inputmode="decimal"
+                placeholder="75.4"
+                required
+                class="w-full h-12 pl-3.5 pr-10 rounded-2xl bg-slate-100 dark:bg-surface-900 border border-slate-200 dark:border-slate-700 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              />
+              <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">kg</span>
+            </div>
+          </div>
+
+          <!-- Date Input -->
+          <div class="col-span-6">
+            <label for="dateInput" class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1 ml-1">Date</label>
+            <input
+              type="date"
+              id="dateInput"
+              required
+              onchange="checkExistingDate()"
+              class="w-full h-12 px-3 rounded-2xl bg-slate-100 dark:bg-surface-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-surface-900 font-bold text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span id="submitBtnText">Save Weight Entry</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- 3. Interactive Comparison Graph -->
+    <section class="rounded-3xl bg-white dark:bg-surface-800 p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-sm font-bold tracking-tight">Weekly Median Trend</h2>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">Smooths out daily water fluctuations</p>
+        </div>
+
+        <!-- Timeframe Selector -->
+        <div class="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-surface-900 text-xs font-semibold">
+          <button type="button" onclick="setTimeframe(4)" id="tf-4" class="tf-btn px-2.5 py-1 rounded-lg transition">4W</button>
+          <button type="button" onclick="setTimeframe(12)" id="tf-12" class="tf-btn px-2.5 py-1 rounded-lg transition">12W</button>
+          <button type="button" onclick="setTimeframe(0)" id="tf-0" class="tf-btn px-2.5 py-1 rounded-lg transition">All</button>
+        </div>
+      </div>
+
+      <!-- Daily Overlay Toggle -->
+      <div class="flex items-center justify-between mb-3 px-3 py-2 rounded-2xl bg-slate-50 dark:bg-surface-900/70 border border-slate-200/60 dark:border-slate-700/50">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-sky-400/70"></span>
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-300">Overlay daily weigh-ins</span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="toggleDailyOverlay" onchange="renderChart()" class="sr-only peer" checked />
+          <div class="w-9 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+        </label>
+      </div>
+
+      <!-- Responsive Canvas Container -->
+      <div class="relative w-full h-64">
+        <canvas id="medianChart"></canvas>
+        <div id="emptyChartState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Log your first weight above or load sample data to preview your weekly median curve.</p>
+          <button type="button" onclick="loadSampleData()" class="mt-3 px-3.5 py-2 rounded-xl bg-emerald-500/15 text-emerald-500 text-xs font-bold hover:bg-emerald-500/25 transition">
+            Load 6 Weeks Sample Data
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Weekly Summaries & Data Tools -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-sm font-bold tracking-tight">Weekly History (Mon–Sun)</h2>
+        <span id="totalWeeksCount" class="text-xs font-semibold text-slate-500 dark:text-slate-400">0 weeks</span>
+      </div>
+
+      <!-- Accordion List of Weeks -->
+      <div id="weeklyListContainer" class="space-y-3">
+        <!-- Populated dynamically -->
+      </div>
+    </section>
+
+    <!-- 5. Backup, Sample Data & Management Card -->
+    <section class="rounded-3xl bg-white dark:bg-surface-800 p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-3">
+      <h2 class="text-sm font-bold tracking-tight">Data & Backup</h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        Your entries are saved privately on this device. Export a backup anytime or test with sample data.
+      </p>
+
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="exportCSV()" class="p-3 rounded-2xl bg-slate-100 dark:bg-surface-900 hover:bg-slate-200 dark:hover:bg-surface-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+          <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+          </svg>
+          Export CSV
+        </button>
+
+        <label class="p-3 rounded-2xl bg-slate-100 dark:bg-surface-900 hover:bg-slate-200 dark:hover:bg-surface-700 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition">
+          <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12" />
+          </svg>
+          Import CSV/JSON
+          <input type="file" id="importFileInput" accept=".csv,.json" onchange="handleImportFile(event)" class="hidden" />
+        </label>
+
+        <button type="button" onclick="loadSampleData()" class="p-3 rounded-2xl bg-slate-100 dark:bg-surface-900 hover:bg-slate-200 dark:hover:bg-surface-700 text-xs font-semibold text-slate-700 dark:text-slate-300 transition">
+          Load Sample Data
+        </button>
+
+        <button type="button" onclick="openClearConfirmModal()" class="p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-xs font-semibold text-rose-500 transition">
+          Clear All Data
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Android Install Instructions Modal -->
+  <div id="installModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-3xl bg-white dark:bg-surface-800 p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="5" y="2" width="14" height="20" rx="3" /><path d="M12 18h.01" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Install on Android</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Use MedianScale like a native app</p>
+          </div>
+        </div>
+        <button onclick="closeInstallModal()" class="p-2 rounded-xl bg-slate-100 dark:bg-surface-700 text-slate-500">✕</button>
+      </div>
+
+      <div id="nativePromptSection" class="hidden">
+        <button onclick="triggerNativeInstall()" class="w-full py-3 rounded-2xl bg-emerald-500 text-surface-900 font-bold text-sm shadow-lg shadow-emerald-500/20">
+          Install App Now
+        </button>
+      </div>
+
+      <ol class="space-y-3 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-surface-900 p-4 rounded-2xl">
+        <li class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 font-bold flex items-center justify-center shrink-0">1</span>
+          <span>Open this page in <strong>Google Chrome</strong> on your Android phone.</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 font-bold flex items-center justify-center shrink-0">2</span>
+          <span>Tap the <strong>three dots menu (⋮)</strong> in the top-right corner of Chrome.</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-500 font-bold flex items-center justify-center shrink-0">3</span>
+          <span>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>. It will appear on your home screen with its own icon and work offline!</span>
+        </li>
+      </ol>
+
+      <button onclick="closeInstallModal()" class="w-full py-3 rounded-2xl bg-slate-100 dark:bg-surface-700 font-semibold text-xs">
+        Got it
+      </button>
+    </div>
+  </div>
+
+  <!-- Custom Clear Data Confirmation Modal (No browser confirm()) -->
+  <div id="clearModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-sm rounded-3xl bg-white dark:bg-surface-800 p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+      <h3 class="font-bold text-base text-rose-500">Delete all weight history?</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        This will permanently remove all logged entries stored in this browser. Consider exporting a CSV backup first.
+      </p>
+      <div class="grid grid-cols-2 gap-2.5 pt-2">
+        <button onclick="closeClearConfirmModal()" class="py-3 rounded-2xl bg-slate-100 dark:bg-surface-700 text-xs font-bold">
+          Cancel
+        </button>
+        <button onclick="confirmClearAllData()" class="py-3 rounded-2xl bg-rose-500 text-white text-xs font-bold">
+          Delete Everything
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // STATE & STORAGE MANAGEMENT
+    // =========================================================================
+    const STORAGE_KEY = 'medianscale_entries_v1';
+    const THEME_KEY = 'medianscale_theme_v1';
+
+    // Entries stored as array of objects: [{ date: 'YYYY-MM-DD', weight: 78.4 }, ...]
+    let entries = [];
+    let selectedTimeframe = 12; // 4, 12, or 0 (All)
+    let chartInstance = null;
+    let expandedWeeks = new Set(); // Stores mondayISO strings of expanded accordions
+    let deferredInstallPrompt = null;
+
+    // Listen for Android Chrome native PWA install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      document.getElementById('nativePromptSection').classList.remove('hidden');
+    });
+
+    function loadEntries() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        entries = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(entries)) entries = [];
+      } catch (err) {
+        console.error('Failed to parse storage:', err);
+        entries = [];
+      }
+    }
+
+    function saveEntries() {
+      try {
+        // Keep sorted chronologically ascending by date
+        entries.sort((a, b) => a.date.localeCompare(b.date));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      } catch (err) {
+        showToast('Error saving data locally', '⚠️');
+      }
+    }
+
+    // =========================================================================
+    // MONDAY–SUNDAY CALENDAR WEEK & STATISTICAL MEDIAN LOGIC
+    // =========================================================================
+
+    /**
+     * Parses 'YYYY-MM-DD' safely in local time (avoiding UTC midnight shift bugs)
+     */
+    function parseLocalDate(isoStr) {
+      const [y, m, d] = isoStr.split('-').map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0);
+    }
+
+    /**
+     * Formats a Date object as 'YYYY-MM-DD' in local time
+     */
+    function toLocalISO(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    /**
+     * Given any date ('YYYY-MM-DD' or Date), returns the Monday ('YYYY-MM-DD')
+     * of that strict Monday-to-Sunday calendar week.
+     */
+    function getMondayISO(dateInput) {
+      const d = typeof dateInput === 'string' ? parseLocalDate(dateInput) : new Date(dateInput);
+      const dayOfWeek = d.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      d.setDate(d.getDate() + diffToMonday);
+      return toLocalISO(d);
+    }
+
+    /**
+     * Given a Monday ISO string, returns Sunday ISO string (+6 days)
+     */
+    function getSundayISO(mondayISO) {
+      const d = parseLocalDate(mondayISO);
+      d.setDate(d.getDate() + 6);
+      return toLocalISO(d);
+    }
+
+    /**
+     * Formats 'YYYY-MM-DD' into readable short label e.g. "Nov 18"
+     */
+    function formatShortDate(isoStr) {
+      const d = parseLocalDate(isoStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    /**
+     * Formats 'YYYY-MM-DD' into weekday + date e.g. "Tue, Nov 24"
+     */
+    function formatDayWithWeekday(isoStr) {
+      const d = parseLocalDate(isoStr);
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    /**
+     * Calculates exact statistical median of an array of numbers.
+     * - Sort ascending
+     * - Odd length: middle element
+     * - Even length: average of two middle elements
+     */
+    function calculateMedian(values) {
+      if (!values || values.length === 0) return null;
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      if (sorted.length % 2 !== 0) {
+        return Number(sorted[mid].toFixed(2));
+      } else {
+        return Number(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(2));
+      }
+    }
+
+    /**
+     * Groups all entries into Monday–Sunday weeks, sorted chronologically ascending.
+     * Computes median, min, max, count, and week-over-week median delta.
+     */
+    function buildWeeklySummaries() {
+      const weekMap = new Map();
+
+      for (const entry of entries) {
+        const monISO = getMondayISO(entry.date);
+        if (!weekMap.has(monISO)) {
+          weekMap.set(monISO, []);
+        }
+        weekMap.get(monISO).push(entry);
+      }
+
+      const sortedMondays = Array.from(weekMap.keys()).sort((a, b) => a.localeCompare(b));
+      const summaries = [];
+
+      for (let i = 0; i < sortedMondays.length; i++) {
+        const monISO = sortedMondays[i];
+        const sunISO = getSundayISO(monISO);
+        const weekEntries = weekMap.get(monISO).sort((a, b) => a.date.localeCompare(b.date));
+        const weights = weekEntries.map(e => e.weight);
+        const median = calculateMedian(weights);
+        const min = Math.min(...weights);
+        const max = Math.max(...weights);
+
+        const prevMedian = i > 0 ? summaries[i - 1].median : null;
+        const delta = prevMedian !== null ? Number((median - prevMedian).toFixed(2)) : null;
+
+        summaries.push({
+          mondayISO: monISO,
+          sundayISO: sunISO,
+          label: `${formatShortDate(monISO)} – ${formatShortDate(sunISO)}`,
+          shortLabel: formatShortDate(monISO),
+          entries: weekEntries,
+          count: weekEntries.length,
+          median,
+          min,
+          max,
+          delta
+        });
+      }
+
+      return summaries;
+    }
+
+    // =========================================================================
+    // UI RENDERING
+    // =========================================================================
+
+    function renderAll() {
+      const summaries = buildWeeklySummaries();
+      renderCurrentWeekHero(summaries);
+      renderWeeklyAccordion(summaries);
+      renderChart(summaries);
+      checkExistingDate();
+    }
+
+    function renderCurrentWeekHero(summaries) {
+      const todayISO = toLocalISO(new Date());
+      const currentMonISO = getMondayISO(todayISO);
+      const currentSunISO = getSundayISO(currentMonISO);
+
+      document.getElementById('currentWeekRange').textContent =
+        `${formatShortDate(currentMonISO)} – ${formatShortDate(currentSunISO)}`;
+
+      const currentSummary = summaries.find(s => s.mondayISO === currentMonISO);
+      const medianEl = document.getElementById('currentMedianValue');
+      const daysBadgeEl = document.getElementById('currentWeekDaysBadge');
+      const deltaBadgeEl = document.getElementById('currentDeltaBadge');
+
+      if (currentSummary) {
+        medianEl.textContent = currentSummary.median.toFixed(1);
+        daysBadgeEl.textContent = `${currentSummary.count}/7 days logged`;
+
+        if (currentSummary.delta !== null) {
+          const d = currentSummary.delta;
+          const sign = d > 0 ? '+' : '';
+          deltaBadgeEl.textContent = `${sign}${d.toFixed(1)} kg`;
+          if (d < 0) {
+            deltaBadgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          } else if (d > 0) {
+            deltaBadgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          } else {
+            deltaBadgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-700/80 text-slate-200';
+          }
+        } else {
+          deltaBadgeEl.textContent = 'First week logged';
+          deltaBadgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-700/80 text-slate-300';
+        }
+      } else {
+        medianEl.textContent = '--.-';
+        daysBadgeEl.textContent = '0/7 days logged';
+        deltaBadgeEl.textContent = 'No logs this week';
+        deltaBadgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-700/80 text-slate-300';
+      }
+
+      // Render 7-day Mon-Sun strip for the current week
+      const stripEl = document.getElementById('weekDayStrip');
+      const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const entryMap = new Map();
+      if (currentSummary) {
+        currentSummary.entries.forEach(e => entryMap.set(e.date, e.weight));
+      }
+
+      let stripHTML = '';
+      for (let i = 0; i < 7; i++) {
+        const d = parseLocalDate(currentMonISO);
+        d.setDate(d.getDate() + i);
+        const iso = toLocalISO(d);
+        const weight = entryMap.get(iso);
+        const isToday = iso === todayISO;
+
+        stripHTML += `
+          <button type="button" onclick="selectDateForEntry('${iso}')" class="flex flex-col items-center py-1.5 px-1 rounded-xl transition ${
+            weight !== undefined
+              ? 'bg-emerald-500/20 border border-emerald-500/40 text-white'
+              : isToday
+              ? 'bg-white/10 border border-white/25 text-slate-200'
+              : 'bg-white/5 border border-transparent text-slate-400'
+          }">
+            <span class="text-[10px] font-semibold uppercase tracking-wider">${dayLabels[i]}</span>
+            <span class="text-[11px] font-bold mt-0.5">${weight !== undefined ? weight.toFixed(1) : '–'}</span>
+          </button>
+        `;
+      }
+      stripEl.innerHTML = stripHTML;
+    }
+
+    function renderWeeklyAccordion(summaries) {
+      const container = document.getElementById('weeklyListContainer');
+      const countLabel = document.getElementById('totalWeeksCount');
+
+      countLabel.textContent = `${summaries.length} ${summaries.length === 1 ? 'week' : 'weeks'}`;
+
+      if (summaries.length === 0) {
+        container.innerHTML = `
+          <div class="rounded-3xl bg-white dark:bg-surface-800 p-6 text-center border border-slate-200/80 dark:border-slate-800">
+            <p class="text-xs text-slate-500 dark:text-slate-400">No weekly summaries yet. Log a weight above to begin.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Display newest weeks first
+      const reversed = [...summaries].reverse();
+      if (expandedWeeks.size === 0 && reversed.length > 0) {
+        expandedWeeks.add(reversed[0].mondayISO);
+      }
+
+      container.innerHTML = reversed.map(week => {
+        const isExpanded = expandedWeeks.has(week.mondayISO);
+        let deltaHTML = `<span class="text-[11px] text-slate-400 font-medium">Baseline</span>`;
+        if (week.delta !== null) {
+          const sign = week.delta > 0 ? '+' : '';
+          const colorClass = week.delta < 0
+            ? 'text-emerald-500 bg-emerald-500/10'
+            : week.delta > 0
+            ? 'text-amber-500 bg-amber-500/10'
+            : 'text-slate-400 bg-slate-500/10';
+          deltaHTML = `<span class="px-2 py-0.5 rounded-lg text-[11px] font-bold ${colorClass}">${sign}${week.delta.toFixed(1)} kg</span>`;
+        }
+
+        const dailyRowsHTML = week.entries.map(entry => `
+          <div class="flex items-center justify-between py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-surface-900/80">
+            <div>
+              <p class="text-xs font-semibold">${formatDayWithWeekday(entry.date)}</p>
+              <p class="text-[10px] text-slate-400">${entry.date}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold">${entry.weight.toFixed(1)} kg</span>
+              <button type="button" onclick="editEntry('${entry.date}', ${entry.weight})" title="Edit" class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+              <button type="button" onclick="deleteEntry('${entry.date}')" title="Delete" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+        return `
+          <div class="rounded-3xl bg-white dark:bg-surface-800 border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm">
+            <button type="button" onclick="toggleWeekExpand('${week.mondayISO}')" class="w-full p-4 flex items-center justify-between text-left active:bg-slate-50 dark:active:bg-surface-700/50 transition">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold">${week.label}</span>
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-surface-900 text-slate-500 dark:text-slate-400">
+                    ${week.count}d
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Range: ${week.min.toFixed(1)} – ${week.max.toFixed(1)} kg</p>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div class="text-right">
+                  <p class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">${week.median.toFixed(1)} <span class="text-xs font-semibold">kg</span></p>
+                  ${deltaHTML}
+                </div>
+                <svg class="w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            ${isExpanded ? `<div class="px-4 pb-4 pt-1 space-y-2 border-t border-slate-100 dark:border-slate-800/80">${dailyRowsHTML}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleWeekExpand(mondayISO) {
+      if (expandedWeeks.has(mondayISO)) {
+        expandedWeeks.delete(mondayISO);
+      } else {
+        expandedWeeks.add(mondayISO);
+      }
+      renderWeeklyAccordion(buildWeeklySummaries());
+    }
+
+    // =========================================================================
+    // CHART.JS WEEKLY MEDIAN & DAILY OVERLAY VISUALIZATION
+    // =========================================================================
+
+    function setTimeframe(weeksCount) {
+      selectedTimeframe = weeksCount;
+      document.querySelectorAll('.tf-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'dark:bg-surface-700', 'text-emerald-600', 'dark:text-emerald-400', 'shadow-sm');
+        btn.classList.add('text-slate-500', 'dark:text-slate-400');
+      });
+      const activeBtn = document.getElementById(`tf-${weeksCount}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-500', 'dark:text-slate-400');
+        activeBtn.classList.add('bg-white', 'dark:bg-surface-700', 'text-emerald-600', 'dark:text-emerald-400', 'shadow-sm');
+      }
+      renderChart();
+    }
+
+    function renderChart(precomputedSummaries) {
+      const allSummaries = precomputedSummaries || buildWeeklySummaries();
+      const emptyStateEl = document.getElementById('emptyChartState');
+      const canvas = document.getElementById('medianChart');
+
+      if (allSummaries.length === 0) {
+        emptyStateEl.classList.remove('hidden');
+        if (chartInstance) {
+          chartInstance.destroy();
+          chartInstance = null;
+        }
+        return;
+      }
+      emptyStateEl.classList.add('hidden');
+
+      const slicedSummaries = selectedTimeframe > 0
+        ? allSummaries.slice(-selectedTimeframe)
+        : allSummaries;
+
+      const showDaily = document.getElementById('toggleDailyOverlay').checked;
+      const isDark = document.documentElement.classList.contains('dark');
+
+      // Build unified timeline labels or week-indexed points
+      // Using category labels per week + scatter/line overlay aligned to each week index
+      const labels = slicedSummaries.map(s => s.shortLabel);
+      const medianData = slicedSummaries.map(s => s.median);
+
+      // Build daily points mapped onto the fractional week X-axis so every daily log
+      // sits accurately inside its Monday-Sunday week column!
+      const dailyPoints = [];
+      if (showDaily) {
+        slicedSummaries.forEach((week, weekIdx) => {
+          const monDate = parseLocalDate(week.mondayISO);
+          week.entries.forEach(entry => {
+            const eDate = parseLocalDate(entry.date);
+            const dayOffset = Math.round((eDate - monDate) / (1000 * 60 * 60 * 24)); // 0..6
+            // Center of week is weekIdx; spread Mon(-0.3) to Sun(+0.3)
+            const xPos = weekIdx + ((dayOffset - 3) * 0.1);
+            dailyPoints.push({
+              x: xPos,
+              y: entry.weight,
+              dateLabel: formatDayWithWeekday(entry.date)
+            });
+          });
+        });
+      }
+
+      const datasets = [
+        {
+          type: 'line',
+          label: 'Weekly Median (kg)',
+          data: medianData.map((val, idx) => ({ x: idx, y: val })),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.14)',
+          borderWidth: 3,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#10b981',
+          pointBorderColor: isDark ? '#0b1120' : '#ffffff',
+          pointBorderWidth: 2,
+          tension: 0.28,
+          fill: true,
+          order: 1
+        }
+      ];
+
+      if (showDaily) {
+        datasets.push({
+          type: 'scatter',
+          label: 'Daily Weigh-in (kg)',
+          data: dailyPoints,
+          backgroundColor: isDark ? 'rgba(56, 189, 248, 0.65)' : 'rgba(2, 132, 199, 0.55)',
+          borderColor: 'transparent',
+          pointRadius: 3.5,
+          pointHoverRadius: 5.5,
+          order: 2
+        });
+      }
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      const gridColor = isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(15, 23, 42, 0.06)';
+      const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+      chartInstance = new Chart(canvas, {
+        data: {
+          labels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: isDark ? '#1e293b' : '#0f172a',
+              titleColor: '#f8fafc',
+              bodyColor: '#e2e8f0',
+              padding: 10,
+              cornerRadius: 12,
+              displayColors: true,
+              callbacks: {
+                title: (items) => {
+                  const first = items[0];
+                  if (first.dataset.type === 'scatter') {
+                    return first.raw.dateLabel;
+                  }
+                  const week = slicedSummaries[Math.round(first.parsed.x)];
+                  return week ? `Week: ${week.label}` : '';
+                },
+                label: (ctx) => {
+                  if (ctx.dataset.type === 'scatter') {
+                    return ` Daily: ${ctx.parsed.y.toFixed(1)} kg`;
+                  }
+                  const week = slicedSummaries[Math.round(ctx.parsed.x)];
+                  const lines = [` Median: ${ctx.parsed.y.toFixed(1)} kg`];
+                  if (week) {
+                    lines.push(` Logged: ${week.count}/7 days (${week.min.toFixed(1)}–${week.max.toFixed(1)} kg)`);
+                  }
+                  return lines;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              min: -0.45,
+              max: Math.max(0.45, slicedSummaries.length - 0.55),
+              grid: { display: false },
+              ticks: {
+                color: tickColor,
+                stepSize: 1,
+                font: { size: 11, weight: '600' },
+                callback: (val) => {
+                  const idx = Math.round(val);
+                  return Number.isInteger(val) && labels[idx] ? labels[idx] : '';
+                }
+              }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: {
+                color: tickColor,
+                font: { size: 11, weight: '500' },
+                callback: (val) => `${val} kg`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // USER ACTIONS (CRUD, SAMPLE DATA, CSV EXPORT/IMPORT)
+    // =========================================================================
+
+    function handleSaveEntry(e) {
+      e.preventDefault();
+      const weightVal = parseFloat(document.getElementById('weightInput').value);
+      const dateVal = document.getElementById('dateInput').value;
+
+      if (isNaN(weightVal) || weightVal < 20 || weightVal > 400 || !dateVal) {
+        showToast('Please enter a valid weight and date', '⚠️');
+        return;
+      }
+
+      const roundedWeight = Math.round(weightVal * 10) / 10;
+      const existingIdx = entries.findIndex(item => item.date === dateVal);
+
+      if (existingIdx >= 0) {
+        entries[existingIdx].weight = roundedWeight;
+        showToast(`Updated ${formatShortDate(dateVal)} to ${roundedWeight.toFixed(1)} kg`, '✓');
+      } else {
+        entries.push({ date: dateVal, weight: roundedWeight });
+        showToast(`Logged ${roundedWeight.toFixed(1)} kg`, '✓');
+      }
+
+      // Automatically expand the week that was just logged
+      expandedWeeks.add(getMondayISO(dateVal));
+
+      saveEntries();
+      document.getElementById('weightInput').value = '';
+      renderAll();
+    }
+
+    function checkExistingDate() {
+      const dateVal = document.getElementById('dateInput').value;
+      const existing = entries.find(item => item.date === dateVal);
+      const indicator = document.getElementById('editingIndicator');
+      const btnText = document.getElementById('submitBtnText');
+
+      if (existing) {
+        indicator.classList.remove('hidden');
+        btnText.textContent = `Update Entry (${existing.weight.toFixed(1)} kg)`;
+      } else {
+        indicator.classList.add('hidden');
+        btnText.textContent = 'Save Weight Entry';
+      }
+    }
+
+    function selectDateForEntry(isoDate) {
+      document.getElementById('dateInput').value = isoDate;
+      const existing = entries.find(item => item.date === isoDate);
+      if (existing) {
+        document.getElementById('weightInput').value = existing.weight.toFixed(1);
+      } else {
+        document.getElementById('weightInput').value = '';
+      }
+      checkExistingDate();
+      document.getElementById('weightInput').focus();
+    }
+
+    function editEntry(dateISO, weight) {
+      document.getElementById('dateInput').value = dateISO;
+      document.getElementById('weightInput').value = weight.toFixed(1);
+      checkExistingDate();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => document.getElementById('weightInput').focus(), 250);
+    }
+
+    function deleteEntry(dateISO) {
+      entries = entries.filter(item => item.date !== dateISO);
+      saveEntries();
+      renderAll();
+      showToast(`Deleted entry for ${formatShortDate(dateISO)}`, '🗑️');
+    }
+
+    function loadSampleData() {
+      const today = new Date();
+      const sample = [];
+      let baseWeight = 82.4;
+
+      // Generate 42 days (6 weeks) of realistic fluctuating weight trending downward
+      for (let i = 41; i >= 0; i--) {
+        // Skip ~15% of days randomly to show realistic partial weeks
+        if (i !== 0 && i % 6 === 0) continue;
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dailyFluctuation = (Math.sin(i * 1.7) * 0.55) + ((Math.random() - 0.5) * 0.4);
+        const w = Math.round((baseWeight + dailyFluctuation) * 10) / 10;
+        sample.push({ date: toLocalISO(d), weight: w });
+        baseWeight -= 0.065; // ~0.45 kg loss per week
+      }
+
+      entries = sample;
+      expandedWeeks.clear();
+      saveEntries();
+      renderAll();
+      showToast('Loaded 6 weeks of sample data', '📊');
+    }
+
+    function exportCSV() {
+      if (entries.length === 0) {
+        showToast('No entries to export', '⚠️');
+        return;
+      }
+      const header = 'date,weight_kg,monday_week_start\n';
+      const rows = entries.map(e => `${e.date},${e.weight.toFixed(1)},${getMondayISO(e.date)}`).join('\n');
+      const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `medianscale_backup_${toLocalISO(new Date())}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported CSV backup', '✓');
+    }
+
+    function handleImportFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target.result.trim();
+          let imported = [];
+
+          if (file.name.endsWith('.json')) {
+            const parsed = JSON.parse(text);
+            if (Array.isArray(parsed)) {
+              imported = parsed.filter(x => x.date && !isNaN(parseFloat(x.weight)))
+                .map(x => ({ date: x.date.slice(0, 10), weight: Math.round(parseFloat(x.weight) * 10) / 10 }));
+            }
+          } else {
+            const lines = text.split(/\r?\n/);
+            for (const line of lines) {
+              const parts = line.split(',');
+              if (parts.length >= 2 && /^\d{4}-\d{2}-\d{2}$/.test(parts[0].trim())) {
+                const w = parseFloat(parts[1].trim());
+                if (!isNaN(w)) {
+                  imported.push({ date: parts[0].trim(), weight: Math.round(w * 10) / 10 });
+                }
+              }
+            }
+          }
+
+          if (imported.length === 0) {
+            showToast('No valid rows found in file', '⚠️');
+            return;
+          }
+
+          // Merge imported entries with existing entries
+          const map = new Map(entries.map(item => [item.date, item.weight]));
+          imported.forEach(item => map.set(item.date, item.weight));
+          entries = Array.from(map.entries()).map(([date, weight]) => ({ date, weight }));
+
+          saveEntries();
+          renderAll();
+          showToast(`Imported ${imported.length} entries`, '✓');
+        } catch (err) {
+          showToast('Invalid file format', '⚠️');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    // =========================================================================
+    // MODALS, THEME & TOAST HELPERS
+    // =========================================================================
+
+    function openInstallModal() {
+      const m = document.getElementById('installModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeInstallModal() {
+      const m = document.getElementById('installModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    async function triggerNativeInstall() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        deferredInstallPrompt = null;
+        closeInstallModal();
+      }
+    }
+
+    function openClearConfirmModal() {
+      const m = document.getElementById('clearModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeClearConfirmModal() {
+      const m = document.getElementById('clearModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function confirmClearAllData() {
+      entries = [];
+      expandedWeeks.clear();
+      saveEntries();
+      renderAll();
+      closeClearConfirmModal();
+      showToast('All data cleared', '🗑️');
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.classList.toggle('dark');
+      const isDark = html.classList.contains('dark');
+      localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+      renderChart();
+    }
+
+    let toastTimer = null;
+    function showToast(msg, icon = '✓') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      document.getElementById('toastIcon').textContent = icon;
+      toast.classList.remove('opacity-0', 'translate-y-3');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-3');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2400);
+    }
+
+    // =========================================================================
+    // INITIALIZATION
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      // Restore saved theme preference
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+
+      // Set default date picker to today
+      document.getElementById('dateInput').value = toLocalISO(new Date());
+
+      loadEntries();
+      setTimeframe(12);
+      renderAll();
+    });
+  </script>
+</body>
+</html>
